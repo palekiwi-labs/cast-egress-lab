@@ -1,0 +1,5 @@
+/cast.local.json
+/cast.env
+/host/logs/
+/results/*
+!/results/.gitkeep

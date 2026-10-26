@@ -1,0 +1,32 @@
+version: "3"
+
+# HOST tasks need docker and run on the host.
+# SERVICE tasks run inside the lab cast service (`cast shell`).
+
+tasks:
+  proxy:up:
+    desc: "[host] create lab network and mitmproxy container"
+    cmds: [host/proxy.sh up]
+  proxy:down:
+    desc: "[host] remove proxy container and lab network"
+    cmds: [host/proxy.sh down]
+  proxy:status:
+    desc: "[host] show proxy container and network members"
+    cmds: [host/proxy.sh status]
+  proxy:logs:
+    desc: "[host] follow egress.jsonl"
+    cmds: [host/proxy.sh logs]
+
+  stage:1:
+    desc: "[host] opt this repo in to stage 1 (then cast down && cast up)"
+    cmds: [cp stages/1-soft/cast.local.json stages/1-soft/cast.env .]
+  stage:off:
+    desc: "[host] opt this repo out (then cast down && cast up)"
+    cmds: [rm -f cast.local.json cast.env]
+
+  probe:
+    desc: "[service] run all probes through the configured proxy"
+    cmds: [probes/run-all.sh]
+  probe:blackhole:
+    desc: "[service] run all probes with proxy vars pointed at a dead port"
+    cmds: [probes/run-all.sh --blackhole]

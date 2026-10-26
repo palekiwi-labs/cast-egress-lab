@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Host-side lifecycle for the egress lab proxy. Run on the host, not in cast.
+#   proxy.sh up | down | status | logs
+set -euo pipefail
+
+NETWORK="${LAB_NETWORK:-cast-egress-lab}"
+PROXY="${LAB_PROXY:-cast-egress-proxy}"
+IMAGE="${LAB_IMAGE:-docker.io/mitmproxy/mitmproxy:latest}"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+LOGS="$HERE/logs"
+
+up() {
+  mkdir -p "$LOGS"
+  docker network inspect "$NETWORK" >/dev/null 2>&1 \
+    || docker network create "$NETWORK" >/dev/null
+  if docker container inspect "$PROXY" >/dev/null 2>&1; then
+    echo "proxy already exists: $PROXY"; return
+  fi
+  # Stage 1: monitor only. --ignore-hosts '.*' passes TLS through untouched,
+  # so no CA is needed; the addon still logs every upstream connection.
+  docker run -d --name "$PROXY" --network "$NETWORK" \
+    -v "$HERE/mitm:/addons:ro" -v "$LOGS:/logs" \
+    "$IMAGE" mitmdump --listen-port 8080 \
+      --set block_global=false \
+      --ignore-hosts '.*' \
+      -s /addons/addon.py >/dev/null
+  echo "proxy up: http://$PROXY:8080 on network $NETWORK"
+}
+
+down() {
+  docker rm -f "$PROXY" >/dev/null 2>&1 || true
+  docker network rm "$NETWORK" >/dev/null 2>&1 \
+    || echo "network $NETWORK still in use (cast down the lab service first)"
+  echo "proxy down"
+}
+
+status() {
+  docker ps -a --filter "name=^${PROXY}\$" --format '{{.Names}}\t{{.Status}}'
+  docker network inspect "$NETWORK" --format \
+    '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || echo "no network"
+}
+
+logs() { tail -n "${1:-50}" -F "$LOGS/egress.jsonl"; }
+
+case "${1:-}" in
+  up) up ;; down) down ;; status) status ;; logs) shift; logs "$@" ;;
+  *) echo "usage: $0 up|down|status|logs [n]" >&2; exit 2 ;;
+esac
