@@ -12,7 +12,9 @@ LOGS="$HERE/logs"
 up() {
   mkdir -p "$LOGS"
   docker network inspect "$NETWORK" >/dev/null 2>&1 \
-    || docker network create "$NETWORK" >/dev/null
+    || docker network create \
+         -o com.docker.network.bridge.name=br-cast-egress \
+         "$NETWORK" >/dev/null
   if docker container inspect "$PROXY" >/dev/null 2>&1; then
     echo "proxy already exists: $PROXY"; return
   fi
