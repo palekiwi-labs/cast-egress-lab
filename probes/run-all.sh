@@ -26,7 +26,10 @@ probes=(${LAB_PROBES:-curl gh git node pi claude opencode})
   echo "HTTPS_PROXY=${HTTPS_PROXY:-<unset>} NO_PROXY=${NO_PROXY:-<unset>}"
   for p in "${probes[@]}"; do
     start=$(date +%s)
-    if ! command -v "$p" >/dev/null 2>&1; then
+    case "$p" in
+      gh-auth|leak) bin=gh ;; git-private) bin=git ;; exfil) bin=curl ;; *) bin=$p ;;
+    esac
+    if ! command -v "$bin" >/dev/null 2>&1; then
       printf '%-9s SKIP (not on PATH)\n' "$p"; continue
     fi
     log=$(timeout 90 "$HERE/$p.sh" 2>&1); rc=$?
