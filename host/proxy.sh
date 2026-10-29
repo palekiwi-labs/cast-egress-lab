@@ -8,6 +8,8 @@ PROXY="${LAB_PROXY:-cast-egress-proxy}"
 IMAGE="${LAB_IMAGE:-docker.io/mitmproxy/mitmproxy:latest}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LOGS="$HERE/logs"
+CERTS="$HERE/certs"
+MODE="${LAB_MODE:-monitor}"
 
 up() {
   mkdir -p "$LOGS"
@@ -20,13 +22,30 @@ up() {
   fi
   # Stage 1: monitor only. --ignore-hosts '.*' passes TLS through untouched,
   # so no CA is needed; the addon still logs every upstream connection.
+  local mode_args=(--ignore-hosts '.*') extra=()
+  if [[ "$MODE" == mitm ]]; then
+    : "${GH_TOKEN_READONLY:?GH_TOKEN_READONLY must be set on the host}"
+    mkdir -p "$CERTS"
+    mode_args=(-s /addons/inject.py)
+    extra=(-v "$CERTS:/home/mitmproxy/.mitmproxy" -e GH_TOKEN_READONLY)
+  fi
   docker run -d --name "$PROXY" --network "$NETWORK" \
-    -v "$HERE/mitm:/addons:ro" -v "$LOGS:/logs" \
+    -v "$HERE/mitm:/addons:ro" -v "$LOGS:/logs" "${extra[@]}" \
     "$IMAGE" mitmdump --listen-port 8080 \
       --set block_global=false \
-      --ignore-hosts '.*' \
+      "${mode_args[@]}" \
       -s /addons/addon.py >/dev/null
-  echo "proxy up: http://$PROXY:8080 on network $NETWORK"
+  [[ "$MODE" == mitm ]] && bundle
+  echo "proxy up ($MODE): http://$PROXY:8080 on network $NETWORK"
+}
+
+bundle() {
+  local ca="$CERTS/mitmproxy-ca-cert.pem" sys="${SYSTEM_CA:-/etc/ssl/certs/ca-certificates.crt}"
+  for _ in $(seq 20); do [[ -s "$ca" ]] && break; sleep 0.5; done
+  [[ -s "$ca" ]] || { echo "CA not generated: $ca" >&2; exit 1; }
+  cat "$sys" "$ca" > "$CERTS/bundle.pem"
+  echo "CA: $ca"
+  echo "bundle: $CERTS/bundle.pem"
 }
 
 down() {

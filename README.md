@@ -45,6 +45,31 @@ Reading results:
 - Every client that honours the vars should show `connect` lines in the
   proxy log during the real run.
 
+## Stage 2: TLS interception and GitHub token injection
+
+The proxy decrypts TLS with its own CA and swaps the placeholder
+`cast-placeholder-gh-token` for the host's `GH_TOKEN_READONLY`, only for
+`github.com` and `api.github.com` (plain or Basic-encoded Authorization).
+The placeholder sent to any other host gets a 403 and a
+`placeholder_blocked` log line. The real token never enters the service.
+
+On the host (`GH_TOKEN_READONLY` exported):
+
+    cast down
+    task proxy:down
+    task proxy:up:mitm   # generates host/certs/ CA and bundle.pem
+    task stage:2
+    cast up
+
+Inside the service:
+
+    LAB_PRIVATE_REPO=<org>/<repo> task probe:mitm
+
+Probes: `gh-auth` (gh api user), `git-private` (ls-remote of a private
+repo), `leak` (only the placeholder is in env), `exfil` (placeholder to
+httpbin.org is refused). The log shows `inject` lines with rule and host,
+never the token.
+
 ## Turning it off
 
     cast down

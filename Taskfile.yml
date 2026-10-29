@@ -20,6 +20,12 @@ tasks:
   stage:1:
     desc: "[host] opt this repo in to stage 1 (then cast down && cast up)"
     cmds: [cp stages/1-soft/cast.local.json stages/1-soft/cast.env .]
+  proxy:up:mitm:
+    desc: "[host] proxy with TLS interception and GH token injection"
+    cmds: [LAB_MODE=mitm host/proxy.sh up]
+  stage:2:
+    desc: "[host] opt this repo in to stage 2 (then cast down && cast up)"
+    cmds: [cp stages/2-mitm/cast.local.json stages/2-mitm/cast.env .]
   stage:off:
     desc: "[host] opt this repo out (then cast down && cast up)"
     cmds: [rm -f cast.local.json cast.env]
@@ -27,6 +33,9 @@ tasks:
   probe:
     desc: "[service] run all probes through the configured proxy"
     cmds: [probes/run-all.sh]
+  probe:mitm:
+    desc: "[service] stage 2 probes: TLS trust, injection, leak, exfil"
+    cmds: [LAB_PROBES="curl gh git pi claude gh-auth git-private leak exfil" probes/run-all.sh]
   probe:blackhole:
     desc: "[service] run all probes with proxy vars pointed at a dead port"
     cmds: [probes/run-all.sh --blackhole]

@@ -1,5 +1,6 @@
 /cast.local.json
 /cast.env
 /host/logs/
+/host/certs/
 /results/*
 !/results/.gitkeep

@@ -19,7 +19,7 @@ if [[ "${1:-}" == "--blackhole" ]]; then
 fi
 
 OUT="$HERE/../results/$(date +%Y%m%dT%H%M%S)-$MODE.txt"
-probes=(curl gh git node pi claude opencode)
+probes=(${LAB_PROBES:-curl gh git node pi claude opencode})
 
 {
   echo "mode=$MODE host=$(hostname) date=$(date -Is)"
