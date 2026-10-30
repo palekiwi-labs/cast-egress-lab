@@ -27,7 +27,7 @@ probes=(${LAB_PROBES:-curl gh git node pi claude opencode})
   for p in "${probes[@]}"; do
     start=$(date +%s)
     case "$p" in
-      gh-auth|leak) bin=gh ;; git-private) bin=git ;; exfil|jira|direct|hostfwd|acuity) bin=curl ;; dns) bin=getent ;; *) bin=$p ;;
+      gh-auth|leak) bin=gh ;; git-private) bin=git ;; exfil|jira|direct|hostfwd|acuity) bin=curl ;; mcp) bin=cast-mcp-client ;; browser) bin=agent-browser ;; dns) bin=getent ;; *) bin=$p ;;
     esac
     if ! command -v "$bin" >/dev/null 2>&1; then
       printf '%-9s SKIP (not on PATH)\n' "$p"; continue

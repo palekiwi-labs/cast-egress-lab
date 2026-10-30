@@ -13,7 +13,7 @@ MODE="${LAB_MODE:-monitor}"
 INTERNAL="${LAB_INTERNAL_NETWORK:-cast-egress-int}"
 FWD="${LAB_FWD:-cast-egress-fwd}"
 FWD_IMAGE="${LAB_FWD_IMAGE:-docker.io/alpine/socat:latest}"
-FWD_PORTS="${LAB_FWD_PORTS:-33222 9000 3030 8080}"
+FWD_PORTS="${LAB_FWD_PORTS:-33222 30319 3030 8080}"
 
 up() {
   mkdir -p "$LOGS"

@@ -45,6 +45,9 @@ tasks:
   probe:internal:
     desc: "[service] stage 3 probes: stage 2 set plus isolation, DNS, forwarders"
     cmds: [LAB_PROBES="direct dns hostfwd acuity node curl gh git pi claude gh-auth git-private jira leak exfil" probes/run-all.sh]
+  probe:fwd:
+    desc: "[service] host forwarders: MCP, QA app, agent-browser"
+    cmds: [LAB_PROBES="hostfwd acuity mcp browser" probes/run-all.sh]
   probe:blackhole:
     desc: "[service] run all probes with proxy vars pointed at a dead port"
     cmds: [probes/run-all.sh --blackhole]
