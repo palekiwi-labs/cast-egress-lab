@@ -69,6 +69,7 @@ def _set(flow: http.HTTPFlow, kind: str, name: str, value: str) -> None:
 
 def _block(flow: http.HTTPFlow, rule: str, host: str, where: str) -> None:
     _log({"event": "placeholder_blocked", "rule": rule, "host": host, "where": where})
+    flow.metadata["cast_blocked"] = True
     flow.response = http.Response.make(403, b"placeholder not allowed for host\n")
 
 

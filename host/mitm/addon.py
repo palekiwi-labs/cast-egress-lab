@@ -52,5 +52,5 @@ def response(flow: http.HTTPFlow) -> None:
         "status": flow.response.status_code,
         "host": flow.request.pretty_host,
         "path": flow.request.path.split("?", 1)[0],
-        "origin": "proxy" if flow.response.timestamp_start is None or not flow.server_conn.connected else "upstream",
+        "origin": "proxy" if flow.metadata.get("cast_blocked") else "upstream",
     })
