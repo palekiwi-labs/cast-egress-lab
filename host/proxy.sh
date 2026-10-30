@@ -10,6 +10,10 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 LOGS="$HERE/logs"
 CERTS="$HERE/certs"
 MODE="${LAB_MODE:-monitor}"
+INTERNAL="${LAB_INTERNAL_NETWORK:-cast-egress-int}"
+FWD="${LAB_FWD:-cast-egress-fwd}"
+FWD_IMAGE="${LAB_FWD_IMAGE:-docker.io/alpine/socat:latest}"
+FWD_PORTS="${LAB_FWD_PORTS:-33222 9000 3030 8080}"
 
 up() {
   mkdir -p "$LOGS"
@@ -23,7 +27,7 @@ up() {
   # Stage 1: monitor only. --ignore-hosts '.*' passes TLS through untouched,
   # so no CA is needed; the addon still logs every upstream connection.
   local mode_args=(--ignore-hosts '.*') extra=()
-  if [[ "$MODE" == mitm ]]; then
+  if [[ "$MODE" == mitm || "$MODE" == internal ]]; then
     : "${GH_TOKEN_READONLY:?GH_TOKEN_READONLY must be set on the host}"
     mkdir -p "$CERTS"
     mode_args=(-s /addons/inject.py)
@@ -36,7 +40,8 @@ up() {
       --set block_global=false \
       "${mode_args[@]}" \
       -s /addons/addon.py >/dev/null
-  [[ "$MODE" == mitm ]] && bundle
+  [[ "$MODE" == mitm || "$MODE" == internal ]] && bundle
+  [[ "$MODE" == internal ]] && internal_up
   echo "proxy up ($MODE): http://$PROXY:8080 on network $NETWORK"
 }
 
@@ -49,15 +54,37 @@ bundle() {
   echo "bundle: $CERTS/bundle.pem"
 }
 
+internal_up() {
+  docker network inspect "$INTERNAL" >/dev/null 2>&1 \
+    || docker network create --internal \
+         -o com.docker.network.bridge.name=br-cast-egint \
+         "$INTERNAL" >/dev/null
+  docker network connect --alias "$PROXY" "$INTERNAL" "$PROXY"
+  local script=""
+  for p in $FWD_PORTS; do
+    script+="socat TCP-LISTEN:$p,fork,reuseaddr TCP:host.docker.internal:$p & "
+  done
+  docker run -d --name "$FWD" --network "$NETWORK" \
+    --add-host host.docker.internal:host-gateway \
+    --entrypoint sh "$FWD_IMAGE" -c "${script}wait" >/dev/null
+  docker network connect --alias host.docker.internal "$INTERNAL" "$FWD"
+  echo "internal network $INTERNAL; forwarder $FWD on ports: $FWD_PORTS"
+}
+
 down() {
+  docker rm -f "$FWD" >/dev/null 2>&1 || true
   docker rm -f "$PROXY" >/dev/null 2>&1 || true
+  docker network rm "$INTERNAL" >/dev/null 2>&1 || true
   docker network rm "$NETWORK" >/dev/null 2>&1 \
     || echo "network $NETWORK still in use (cast down the lab service first)"
   echo "proxy down"
 }
 
 status() {
-  docker ps -a --filter "name=^${PROXY}\$" --format '{{.Names}}\t{{.Status}}'
+  docker ps -a --filter "name=^${PROXY}\$" --filter "name=^${FWD}\$" \
+    --format '{{.Names}}\t{{.Status}}'
+  docker network inspect "$INTERNAL" --format \
+    'internal: {{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || true
   docker network inspect "$NETWORK" --format \
     '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || echo "no network"
 }

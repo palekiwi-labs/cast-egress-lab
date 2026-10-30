@@ -70,6 +70,36 @@ repo), `leak` (only the placeholder is in env), `exfil` (placeholder to
 httpbin.org is refused). The log shows `inject` lines with rule and host,
 never the token.
 
+## Stage 3: internal network and host forwarders
+
+The service joins only `cast-egress-int`, an `--internal` network with no
+gateway. The proxy (also on `cast-egress-lab`) is its only way out. A
+socat forwarder `cast-egress-fwd` carries the alias `host.docker.internal`
+on the internal network and relays ports 33222 (acuity), 9000 (MCP), 3030
+and 8080 (QA app) to the host. Stage 3 sets `add_host_docker_internal`
+to false so the name resolves to the forwarder through docker DNS.
+Injection works as in stage 2.
+
+On the host (the stage 2 token vars exported):
+
+    cast down
+    task proxy:down
+    task proxy:up:internal
+    task stage:3
+    cast up
+
+Inside the service:
+
+    LAB_PRIVATE_REPO=<org>/<repo> \
+      PI_PROBE_ARGS="--model google/gemini-3.8-flash" task probe:internal
+
+Expected: `direct` OK (direct egress blocked), `node` FAIL (bare fetch
+bypasses the proxy and now has no route), `dns` OK only if external names
+do not resolve. `hostfwd` reports a status per port; `000` means nothing
+answered (forwarder down or the host service not running). `acuity` shows
+whether the sandbox shell's hardcoded `ACUITY_HOST` (172.17.0.1) still
+works; `pi` shows whether an unreachable acuity hangs pi or fails fast.
+
 ## Turning it off
 
     cast down

@@ -1,0 +1,19 @@
+{
+  "network": "cast-egress-int",
+  "project_shell": ".#default",
+  "env_passthrough": [
+    "ANTHROPIC_API_KEY",
+    "CONTEXT7_API_KEY",
+    "JIRA_BOARD_ID",
+    "JIRA_EMAIL",
+    "JIRA_PROJECT",
+    "JIRA_URL",
+    "OPENCODE_API_KEY",
+    "OPENCODE_CONFIG_DIR",
+    "OPENCODE_ENABLE_EXPERIMENTAL_MODELS",
+    "OPENCODE_DISABLE_PROJECT_CONFIG",
+    "TYPESAFE_API_KEY",
+    "ZAI_CODING_PLAN_API_KEY"
+  ],
+  "add_host_docker_internal": false
+}
