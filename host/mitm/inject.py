@@ -16,6 +16,18 @@ RULES = [
         "secret": os.environ.get("GH_TOKEN_READONLY", ""),
         "hosts": {"github.com", "api.github.com"},
     },
+    {
+        "name": "gemini",
+        "placeholder": "cast-placeholder-gemini-key",
+        "secret": os.environ.get("GOOGLE_GENERATIVE_AI_API_KEY", ""),
+        "hosts": {"generativelanguage.googleapis.com"},
+    },
+    {
+        "name": "jira",
+        "placeholder": "cast-placeholder-jira-token",
+        "secret": os.environ.get("JIRA_TOKEN_READONLY", ""),
+        "hosts": {"api.atlassian.com", "spabreaks.atlassian.net"},
+    },
 ]
 
 
@@ -41,19 +53,41 @@ def _swap(value: str, placeholder: str, secret: str) -> str | None:
     return f"{scheme} {base64.b64encode(swapped).decode()}"
 
 
+def _fields(flow: http.HTTPFlow):
+    for name, value in flow.request.headers.items():
+        yield "header", name, value
+    for name, value in flow.request.query.items():
+        yield "query", name, value
+
+
+def _set(flow: http.HTTPFlow, kind: str, name: str, value: str) -> None:
+    if kind == "header":
+        flow.request.headers[name] = value
+    else:
+        flow.request.query[name] = value
+
+
+def _block(flow: http.HTTPFlow, rule: str, host: str, where: str) -> None:
+    _log({"event": "placeholder_blocked", "rule": rule, "host": host, "where": where})
+    flow.response = http.Response.make(403, b"placeholder not allowed for host\n")
+
+
 def request(flow: http.HTTPFlow) -> None:
-    auth = flow.request.headers.get("authorization")
-    if not auth:
-        return
     host = flow.request.pretty_host
+    for kind, name, value in list(_fields(flow)):
+        for rule in RULES:
+            swapped = _swap(value, rule["placeholder"], rule["secret"])
+            if swapped is None:
+                continue
+            where = f"{kind}:{name.lower()}"
+            if host not in rule["hosts"] or not rule["secret"]:
+                _block(flow, rule["name"], host, where)
+                return
+            _set(flow, kind, name, swapped)
+            _log({"event": "inject", "rule": rule["name"], "host": host, "where": where})
+            break
+    body = flow.request.get_content(strict=False) or b""
     for rule in RULES:
-        swapped = _swap(auth, rule["placeholder"], rule["secret"])
-        if swapped is None:
-            continue
-        if host in rule["hosts"] and rule["secret"]:
-            flow.request.headers["authorization"] = swapped
-            _log({"event": "inject", "rule": rule["name"], "host": host})
-        else:
-            _log({"event": "placeholder_blocked", "rule": rule["name"], "host": host})
-            flow.response = http.Response.make(403, b"placeholder not allowed for host\n")
-        return
+        if rule["placeholder"].encode() in body:
+            _block(flow, rule["name"], host, "body")
+            return

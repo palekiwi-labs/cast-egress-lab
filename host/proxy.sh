@@ -27,7 +27,8 @@ up() {
     : "${GH_TOKEN_READONLY:?GH_TOKEN_READONLY must be set on the host}"
     mkdir -p "$CERTS"
     mode_args=(-s /addons/inject.py)
-    extra=(-v "$CERTS:/home/mitmproxy/.mitmproxy" -e GH_TOKEN_READONLY)
+    extra=(-v "$CERTS:/home/mitmproxy/.mitmproxy" -e GH_TOKEN_READONLY
+           -e GOOGLE_GENERATIVE_AI_API_KEY -e JIRA_TOKEN_READONLY)
   fi
   docker run -d --name "$PROXY" --network "$NETWORK" \
     -v "$HERE/mitm:/addons:ro" -v "$LOGS:/logs" "${extra[@]}" \

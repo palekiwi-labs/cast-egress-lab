@@ -35,7 +35,7 @@ tasks:
     cmds: [probes/run-all.sh]
   probe:mitm:
     desc: "[service] stage 2 probes: TLS trust, injection, leak, exfil"
-    cmds: [LAB_PROBES="curl gh git pi claude gh-auth git-private leak exfil" probes/run-all.sh]
+    cmds: [LAB_PROBES="curl gh git pi claude gh-auth git-private jira leak exfil" probes/run-all.sh]
   probe:blackhole:
     desc: "[service] run all probes with proxy vars pointed at a dead port"
     cmds: [probes/run-all.sh --blackhole]
