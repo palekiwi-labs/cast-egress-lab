@@ -14,7 +14,7 @@
       # mkShellNoCC avoids a stdenv bash replacing SHELL.
       devShells = forAll (pkgs: {
         default = pkgs.mkShellNoCC {
-          packages = with pkgs; [ nodejs opencode jq go-task ];
+          packages = with pkgs; [ nodejs opencode jq go-task nss.tools ];
         };
       });
     };

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 rc=0
-for url in https://example.com ${LAB_QA_URL:-http://host.docker.internal:3030/}; do
+for url in https://example.com ${LAB_QA_URL:-http://localhost:3030/}; do
   if out=$(agent-browser --session lab-probe open "$url" 2>&1); then
     echo "$url OK: $(echo "$out" | head -n 1)"
   else
