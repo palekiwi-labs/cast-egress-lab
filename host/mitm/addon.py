@@ -43,3 +43,14 @@ def server_disconnected(data: server_hooks.ServerConnectionHookData) -> None:
         "client": data.client.peername[0] if data.client.peername else None,
         "address": list(data.server.address or ()),
     })
+
+
+def response(flow: http.HTTPFlow) -> None:
+    _write({
+        "event": "response",
+        "client": flow.client_conn.peername[0],
+        "status": flow.response.status_code,
+        "host": flow.request.pretty_host,
+        "path": flow.request.path.split("?", 1)[0],
+        "origin": "proxy" if flow.response.timestamp_start is None or not flow.server_conn.connected else "upstream",
+    })
